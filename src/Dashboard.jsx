@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 
 // Currency formatter
@@ -184,8 +184,267 @@ const TabButton = ({ active, onClick, children }) => (
   </button>
 );
 
+// API base URL - always use relative path (Vite proxy handles dev, same server in prod)
+const API_URL = '/api';
+
+// Save/Load Modal Component
+const SaveLoadModal = ({ isOpen, onClose, mode, onSave, onLoad, currentData }) => {
+  const [models, setModels] = useState([]);
+  const [saveName, setSaveName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchModels();
+      setSaveName('');
+      setError('');
+    }
+  }, [isOpen]);
+
+  const fetchModels = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/models`);
+      if (res.ok) {
+        const data = await res.json();
+        setModels(data);
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!saveName.trim()) {
+      setError('Please enter a name');
+      return;
+    }
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/models`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: saveName, data: currentData })
+      });
+      if (res.ok) {
+        onClose();
+      } else {
+        setError('Failed to save');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLoad = async (id) => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_URL}/models/${id}`);
+      if (res.ok) {
+        const model = await res.json();
+        onLoad(model.data);
+        onClose();
+      }
+    } catch (err) {
+      setError('Failed to load model');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this saved model?')) return;
+    try {
+      await fetch(`${API_URL}/models/${id}`, { method: 'DELETE' });
+      fetchModels();
+    } catch (err) {
+      setError('Failed to delete');
+    }
+  };
+
+  const formatDate = (dateStr) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'rgba(0,0,0,0.8)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 10000,
+    }} onClick={onClose}>
+      <div style={{
+        background: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: '8px',
+        width: '500px',
+        maxHeight: '80vh',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{
+          padding: '20px',
+          borderBottom: `1px solid ${colors.border}`,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: colors.text }}>
+            {mode === 'save' ? 'Save Model' : 'Load Model'}
+          </h2>
+          <button onClick={onClose} style={{
+            background: 'none',
+            border: 'none',
+            color: colors.textMuted,
+            fontSize: '20px',
+            cursor: 'pointer',
+          }}>×</button>
+        </div>
+
+        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+          {error && (
+            <div style={{
+              padding: '10px',
+              background: colors.negative + '20',
+              border: `1px solid ${colors.negative}`,
+              borderRadius: '4px',
+              marginBottom: '16px',
+              fontSize: '12px',
+              color: colors.negative,
+            }}>{error}</div>
+          )}
+
+          {mode === 'save' && (
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '11px', color: colors.textMuted, marginBottom: '6px', textTransform: 'uppercase' }}>
+                Model Name
+              </label>
+              <input
+                type="text"
+                value={saveName}
+                onChange={e => setSaveName(e.target.value)}
+                placeholder="e.g., Base Case Q1 2025"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  background: colors.bg,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: '4px',
+                  color: colors.text,
+                  fontSize: '14px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                onClick={handleSave}
+                disabled={loading}
+                style={{
+                  marginTop: '12px',
+                  width: '100%',
+                  padding: '12px',
+                  background: colors.accent,
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: colors.bg,
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: loading ? 'wait' : 'pointer',
+                  opacity: loading ? 0.7 : 1,
+                }}
+              >
+                {loading ? 'Saving...' : 'Save Model'}
+              </button>
+            </div>
+          )}
+
+          {models.length > 0 && (
+            <>
+              <div style={{ fontSize: '11px', color: colors.textMuted, marginBottom: '10px', textTransform: 'uppercase' }}>
+                {mode === 'save' ? 'Or overwrite existing:' : 'Saved Models'}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {models.map(model => (
+                  <div
+                    key={model.id}
+                    onClick={() => mode === 'load' ? handleLoad(model.id) : null}
+                    style={{
+                      padding: '12px 16px',
+                      background: colors.bg,
+                      border: `1px solid ${colors.border}`,
+                      borderRadius: '4px',
+                      cursor: mode === 'load' ? 'pointer' : 'default',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      transition: 'border-color 0.2s',
+                      ...(mode === 'load' && { ':hover': { borderColor: colors.accent } }),
+                    }}
+                    onMouseOver={e => mode === 'load' && (e.currentTarget.style.borderColor = colors.accent)}
+                    onMouseOut={e => e.currentTarget.style.borderColor = colors.border}
+                  >
+                    <div>
+                      <div style={{ fontSize: '14px', color: colors.text, fontWeight: '500' }}>{model.name}</div>
+                      <div style={{ fontSize: '11px', color: colors.textMuted, marginTop: '4px' }}>
+                        {formatDate(model.updated_at)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => handleDelete(model.id, e)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: colors.textMuted,
+                        fontSize: '16px',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                      }}
+                      title="Delete"
+                    >×</button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {loading && models.length === 0 && (
+            <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
+              Loading...
+            </div>
+          )}
+
+          {!loading && models.length === 0 && mode === 'load' && (
+            <div style={{ textAlign: 'center', color: colors.textMuted, padding: '20px' }}>
+              No saved models yet
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function ThirdSpaceDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
+  const [saveLoadModal, setSaveLoadModal] = useState({ open: false, mode: 'save' });
   
   // ===== MEMBERSHIP ASSUMPTIONS =====
   const [studentFee, setStudentFee] = useState(65);
@@ -283,6 +542,101 @@ export default function ThirdSpaceDashboard() {
   const [secondaryMarket, setSecondaryMarket] = useState(2809);
   const [weekenders, setWeekenders] = useState(225);
   const [conversionRate, setConversionRate] = useState(0.012);
+
+  // ===== SAVE/LOAD FUNCTIONS =====
+  const getCurrentData = () => ({
+    studentFee, studentMembers, studentGrowth,
+    artistFee, artistMembers, artistGrowth,
+    proFee, proMembers, proGrowth,
+    rehearsalRate, rehearsalHours, rehearsalGrowth,
+    recordingRate, recordingHours, recordingGrowth,
+    lessonRate, lessonHours, lessonGrowth, lessonCommission,
+    streamingRate, streamingEvents, streamingGrowth,
+    showcaseRate, showcaseEvents, showcaseGrowth,
+    corporateRate, corporateEvents, corporateGrowth,
+    merchAvg, merchSales, merchGrowth,
+    rentalAvg, rentalSales, rentalGrowth,
+    bevAvg, bevSales, bevGrowth,
+    buildout, equipment, streaming, opCapital, legal, marketing, contingencyPct,
+    rent, utilities, insurance, monthlyMarketing, software, maintenance, misc,
+    techDirectorRate, techDirectorHours, generalManagerRate, generalManagerHours,
+    studentWorkerRate, studentWorkerHours, eventStaffRate, eventStaffHours,
+    ownerDrawY2, ownerDrawY3,
+    dailyHours, daysPerWeek, liveRoomLockout, utilizationTarget,
+    primaryMarket, secondaryMarket, weekenders, conversionRate,
+  });
+
+  const loadData = (data) => {
+    if (data.studentFee !== undefined) setStudentFee(data.studentFee);
+    if (data.studentMembers !== undefined) setStudentMembers(data.studentMembers);
+    if (data.studentGrowth !== undefined) setStudentGrowth(data.studentGrowth);
+    if (data.artistFee !== undefined) setArtistFee(data.artistFee);
+    if (data.artistMembers !== undefined) setArtistMembers(data.artistMembers);
+    if (data.artistGrowth !== undefined) setArtistGrowth(data.artistGrowth);
+    if (data.proFee !== undefined) setProFee(data.proFee);
+    if (data.proMembers !== undefined) setProMembers(data.proMembers);
+    if (data.proGrowth !== undefined) setProGrowth(data.proGrowth);
+    if (data.rehearsalRate !== undefined) setRehearsalRate(data.rehearsalRate);
+    if (data.rehearsalHours !== undefined) setRehearsalHours(data.rehearsalHours);
+    if (data.rehearsalGrowth !== undefined) setRehearsalGrowth(data.rehearsalGrowth);
+    if (data.recordingRate !== undefined) setRecordingRate(data.recordingRate);
+    if (data.recordingHours !== undefined) setRecordingHours(data.recordingHours);
+    if (data.recordingGrowth !== undefined) setRecordingGrowth(data.recordingGrowth);
+    if (data.lessonRate !== undefined) setLessonRate(data.lessonRate);
+    if (data.lessonHours !== undefined) setLessonHours(data.lessonHours);
+    if (data.lessonGrowth !== undefined) setLessonGrowth(data.lessonGrowth);
+    if (data.lessonCommission !== undefined) setLessonCommission(data.lessonCommission);
+    if (data.streamingRate !== undefined) setStreamingRate(data.streamingRate);
+    if (data.streamingEvents !== undefined) setStreamingEvents(data.streamingEvents);
+    if (data.streamingGrowth !== undefined) setStreamingGrowth(data.streamingGrowth);
+    if (data.showcaseRate !== undefined) setShowcaseRate(data.showcaseRate);
+    if (data.showcaseEvents !== undefined) setShowcaseEvents(data.showcaseEvents);
+    if (data.showcaseGrowth !== undefined) setShowcaseGrowth(data.showcaseGrowth);
+    if (data.corporateRate !== undefined) setCorporateRate(data.corporateRate);
+    if (data.corporateEvents !== undefined) setCorporateEvents(data.corporateEvents);
+    if (data.corporateGrowth !== undefined) setCorporateGrowth(data.corporateGrowth);
+    if (data.merchAvg !== undefined) setMerchAvg(data.merchAvg);
+    if (data.merchSales !== undefined) setMerchSales(data.merchSales);
+    if (data.merchGrowth !== undefined) setMerchGrowth(data.merchGrowth);
+    if (data.rentalAvg !== undefined) setRentalAvg(data.rentalAvg);
+    if (data.rentalSales !== undefined) setRentalSales(data.rentalSales);
+    if (data.rentalGrowth !== undefined) setRentalGrowth(data.rentalGrowth);
+    if (data.bevAvg !== undefined) setBevAvg(data.bevAvg);
+    if (data.bevSales !== undefined) setBevSales(data.bevSales);
+    if (data.bevGrowth !== undefined) setBevGrowth(data.bevGrowth);
+    if (data.buildout !== undefined) setBuildout(data.buildout);
+    if (data.equipment !== undefined) setEquipment(data.equipment);
+    if (data.streaming !== undefined) setStreaming(data.streaming);
+    if (data.opCapital !== undefined) setOpCapital(data.opCapital);
+    if (data.legal !== undefined) setLegal(data.legal);
+    if (data.marketing !== undefined) setMarketing(data.marketing);
+    if (data.contingencyPct !== undefined) setContingencyPct(data.contingencyPct);
+    if (data.rent !== undefined) setRent(data.rent);
+    if (data.utilities !== undefined) setUtilities(data.utilities);
+    if (data.insurance !== undefined) setInsurance(data.insurance);
+    if (data.monthlyMarketing !== undefined) setMonthlyMarketing(data.monthlyMarketing);
+    if (data.software !== undefined) setSoftware(data.software);
+    if (data.maintenance !== undefined) setMaintenance(data.maintenance);
+    if (data.misc !== undefined) setMisc(data.misc);
+    if (data.techDirectorRate !== undefined) setTechDirectorRate(data.techDirectorRate);
+    if (data.techDirectorHours !== undefined) setTechDirectorHours(data.techDirectorHours);
+    if (data.generalManagerRate !== undefined) setGeneralManagerRate(data.generalManagerRate);
+    if (data.generalManagerHours !== undefined) setGeneralManagerHours(data.generalManagerHours);
+    if (data.studentWorkerRate !== undefined) setStudentWorkerRate(data.studentWorkerRate);
+    if (data.studentWorkerHours !== undefined) setStudentWorkerHours(data.studentWorkerHours);
+    if (data.eventStaffRate !== undefined) setEventStaffRate(data.eventStaffRate);
+    if (data.eventStaffHours !== undefined) setEventStaffHours(data.eventStaffHours);
+    if (data.ownerDrawY2 !== undefined) setOwnerDrawY2(data.ownerDrawY2);
+    if (data.ownerDrawY3 !== undefined) setOwnerDrawY3(data.ownerDrawY3);
+    if (data.dailyHours !== undefined) setDailyHours(data.dailyHours);
+    if (data.daysPerWeek !== undefined) setDaysPerWeek(data.daysPerWeek);
+    if (data.liveRoomLockout !== undefined) setLiveRoomLockout(data.liveRoomLockout);
+    if (data.utilizationTarget !== undefined) setUtilizationTarget(data.utilizationTarget);
+    if (data.primaryMarket !== undefined) setPrimaryMarket(data.primaryMarket);
+    if (data.secondaryMarket !== undefined) setSecondaryMarket(data.secondaryMarket);
+    if (data.weekenders !== undefined) setWeekenders(data.weekenders);
+    if (data.conversionRate !== undefined) setConversionRate(data.conversionRate);
+  };
 
   // ===== CALCULATIONS =====
   const calculations = useMemo(() => {
@@ -1035,10 +1389,58 @@ export default function ThirdSpaceDashboard() {
         color: colors.textMuted,
         display: 'flex',
         justifyContent: 'space-between',
+        alignItems: 'center',
       }}>
         <span>3RD SPACE WOODSTOCK • Financial Planning Model</span>
-        <span>All inputs are editable • Changes update in real-time</span>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+          <span>All inputs are editable • Changes update in real-time</span>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setSaveLoadModal({ open: true, mode: 'save' })}
+              style={{
+                padding: '6px 16px',
+                background: colors.accent,
+                border: 'none',
+                borderRadius: '4px',
+                color: colors.bg,
+                fontSize: '11px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setSaveLoadModal({ open: true, mode: 'load' })}
+              style={{
+                padding: '6px 16px',
+                background: 'transparent',
+                border: `1px solid ${colors.border}`,
+                borderRadius: '4px',
+                color: colors.text,
+                fontSize: '11px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Load
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Save/Load Modal */}
+      <SaveLoadModal
+        isOpen={saveLoadModal.open}
+        mode={saveLoadModal.mode}
+        onClose={() => setSaveLoadModal({ open: false, mode: 'save' })}
+        onLoad={loadData}
+        currentData={getCurrentData()}
+      />
     </div>
   );
 }
