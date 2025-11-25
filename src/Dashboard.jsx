@@ -259,6 +259,10 @@ export default function ThirdSpaceDashboard() {
   const [misc, setMisc] = useState(300);
   
   // ===== STAFFING =====
+  const [techDirectorRate, setTechDirectorRate] = useState(0);
+  const [techDirectorHours, setTechDirectorHours] = useState(0);
+  const [generalManagerRate, setGeneralManagerRate] = useState(0);
+  const [generalManagerHours, setGeneralManagerHours] = useState(0);
   const [studentWorkerRate, setStudentWorkerRate] = useState(20);
   const [studentWorkerHours, setStudentWorkerHours] = useState(80);
   const [eventStaffRate, setEventStaffRate] = useState(22);
@@ -289,7 +293,7 @@ export default function ThirdSpaceDashboard() {
     
     // Monthly fixed costs
     const monthlyFixed = rent + utilities + insurance + monthlyMarketing + software + maintenance + misc;
-    const monthlyStaffing = (studentWorkerRate * studentWorkerHours) + (eventStaffRate * eventStaffHours);
+    const monthlyStaffing = (techDirectorRate * techDirectorHours) + (generalManagerRate * generalManagerHours) + (studentWorkerRate * studentWorkerHours) + (eventStaffRate * eventStaffHours);
     
     // Year 1 Revenue (with ramp-up - avg 75% of full year)
     const membershipY1 = ((studentFee * studentMembers) + (artistFee * artistMembers) + (proFee * proMembers)) * 12 * 0.83;
@@ -415,6 +419,7 @@ export default function ThirdSpaceDashboard() {
     merchAvg, merchSales, merchGrowth, rentalAvg, rentalSales, rentalGrowth, bevAvg, bevSales, bevGrowth,
     buildout, equipment, streaming, opCapital, legal, marketing, contingencyPct,
     rent, utilities, insurance, monthlyMarketing, software, maintenance, misc,
+    techDirectorRate, techDirectorHours, generalManagerRate, generalManagerHours,
     studentWorkerRate, studentWorkerHours, eventStaffRate, eventStaffHours,
     ownerDrawY2, ownerDrawY3,
     dailyHours, daysPerWeek, liveRoomLockout, utilizationTarget,
@@ -573,6 +578,10 @@ export default function ThirdSpaceDashboard() {
               </Section>
               
               <Section title="Staffing">
+                <InputField label="Technical Director Rate/Hr" value={techDirectorRate} onChange={setTechDirectorRate} prefix="$" tooltip="Audio engineer, equipment maintenance, session oversight" />
+                <InputField label="Technical Director Hours/Mo" value={techDirectorHours} onChange={setTechDirectorHours} tooltip="Monthly hours for technical direction and engineering" />
+                <InputField label="General Manager Rate/Hr" value={generalManagerRate} onChange={setGeneralManagerRate} prefix="$" tooltip="Operations, scheduling, member relations, business development" />
+                <InputField label="General Manager Hours/Mo" value={generalManagerHours} onChange={setGeneralManagerHours} tooltip="Monthly hours for management and operations" />
                 <InputField label="Student Worker Rate/Hr" value={studentWorkerRate} onChange={setStudentWorkerRate} prefix="$" tooltip="Part-time staff for front desk, cleaning, basic studio assistance" />
                 <InputField label="Student Worker Hours/Mo" value={studentWorkerHours} onChange={setStudentWorkerHours} tooltip="Total monthly hours across all part-time workers" />
                 <InputField label="Event Staff Rate/Hr" value={eventStaffRate} onChange={setEventStaffRate} prefix="$" tooltip="Contract help for events, streaming, load-in/load-out" />
