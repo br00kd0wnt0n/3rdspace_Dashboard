@@ -52,8 +52,7 @@ const LoginScreen = ({ onLogin }) => {
       fontFamily: "'Inter', -apple-system, sans-serif",
     }}>
       <div style={{
-        background: colors.surface,
-        border: `1px solid ${colors.border}`,
+        background: colors.bg,
         borderRadius: '8px',
         padding: '40px',
         width: '100%',
@@ -75,13 +74,13 @@ const LoginScreen = ({ onLogin }) => {
           </video>
         </div>
         <div style={{
-          fontSize: '12px',
+          fontSize: '10px',
           color: colors.textMuted,
           textTransform: 'uppercase',
-          letterSpacing: '2px',
+          letterSpacing: '3px',
           marginBottom: '32px',
         }}>
-          Financial Model
+          Private
         </div>
 
         <form onSubmit={handleSubmit}>
