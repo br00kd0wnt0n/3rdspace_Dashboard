@@ -23,6 +23,115 @@ const colors = {
   ancillary: '#22c55e',
 };
 
+// Password for access - change this to your desired password
+const ACCESS_PASSWORD = '3rdspace2025';
+
+// Login Screen Component
+const LoginScreen = ({ onLogin }) => {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (password === ACCESS_PASSWORD) {
+      sessionStorage.setItem('3rdspace_authenticated', 'true');
+      onLogin();
+    } else {
+      setError('Incorrect password');
+      setPassword('');
+    }
+  };
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: colors.bg,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: "'Inter', -apple-system, sans-serif",
+    }}>
+      <div style={{
+        background: colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: '8px',
+        padding: '40px',
+        width: '100%',
+        maxWidth: '400px',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          fontSize: '24px',
+          fontWeight: '700',
+          color: colors.text,
+          marginBottom: '8px',
+          letterSpacing: '-0.5px',
+        }}>
+          3RD SPACE
+        </div>
+        <div style={{
+          fontSize: '12px',
+          color: colors.textMuted,
+          textTransform: 'uppercase',
+          letterSpacing: '2px',
+          marginBottom: '32px',
+        }}>
+          Financial Model
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); setError(''); }}
+            placeholder="Enter password"
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              background: colors.bg,
+              border: `1px solid ${error ? colors.negative : colors.border}`,
+              borderRadius: '4px',
+              color: colors.text,
+              fontSize: '14px',
+              outline: 'none',
+              marginBottom: '12px',
+              boxSizing: 'border-box',
+            }}
+            autoFocus
+          />
+          {error && (
+            <div style={{
+              fontSize: '12px',
+              color: colors.negative,
+              marginBottom: '12px',
+            }}>
+              {error}
+            </div>
+          )}
+          <button
+            type="submit"
+            style={{
+              width: '100%',
+              padding: '14px',
+              background: colors.accent,
+              border: 'none',
+              borderRadius: '4px',
+              color: colors.bg,
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+            }}
+          >
+            Access Dashboard
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Info Tooltip Component
 const InfoTooltip = ({ text, position = 'above' }) => {
   const [show, setShow] = useState(false);
@@ -443,6 +552,18 @@ const SaveLoadModal = ({ isOpen, onClose, mode, onSave, onLoad, currentData }) =
 };
 
 export default function ThirdSpaceDashboard() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('3rdspace_authenticated') === 'true';
+  });
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  }
+
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [saveLoadModal, setSaveLoadModal] = useState({ open: false, mode: 'save' });
   
