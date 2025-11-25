@@ -60,14 +60,19 @@ const LoginScreen = ({ onLogin }) => {
         maxWidth: '400px',
         textAlign: 'center',
       }}>
-        <div style={{
-          fontSize: '24px',
-          fontWeight: '700',
-          color: colors.text,
-          marginBottom: '8px',
-          letterSpacing: '-0.5px',
-        }}>
-          3RD SPACE
+        <div style={{ marginBottom: '24px' }}>
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            style={{
+              width: '200px',
+              height: 'auto',
+            }}
+          >
+            <source src="/3RD_logo-motion.mp4" type="video/mp4" />
+          </video>
         </div>
         <div style={{
           fontSize: '12px',
