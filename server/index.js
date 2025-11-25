@@ -18,6 +18,19 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(join(__dirname, '../dist')));
 }
 
+// Password from environment variable (default for local dev)
+const ACCESS_PASSWORD = process.env.ACCESS_PASSWORD || '3rdspace2025';
+
+// Auth endpoint - validates password server-side
+app.post('/api/auth', (req, res) => {
+  const { password } = req.body;
+  if (password === ACCESS_PASSWORD) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ error: 'Invalid password' });
+  }
+});
+
 // Database connection
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,

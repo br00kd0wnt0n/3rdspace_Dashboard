@@ -23,22 +23,35 @@ const colors = {
   ancillary: '#22c55e',
 };
 
-// Password for access - change this to your desired password
-const ACCESS_PASSWORD = '3rdspace2025';
-
 // Login Screen Component
 const LoginScreen = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (password === ACCESS_PASSWORD) {
-      sessionStorage.setItem('3rdspace_authenticated', 'true');
-      onLogin();
-    } else {
-      setError('Incorrect password');
-      setPassword('');
+    setLoading(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+
+      if (res.ok) {
+        sessionStorage.setItem('3rdspace_authenticated', 'true');
+        onLogin();
+      } else {
+        setError('Incorrect password');
+        setPassword('');
+      }
+    } catch (err) {
+      setError('Connection error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -114,6 +127,7 @@ const LoginScreen = ({ onLogin }) => {
           )}
           <button
             type="submit"
+            disabled={loading}
             style={{
               width: '100%',
               padding: '14px',
@@ -123,12 +137,13 @@ const LoginScreen = ({ onLogin }) => {
               color: colors.bg,
               fontSize: '13px',
               fontWeight: '600',
-              cursor: 'pointer',
+              cursor: loading ? 'wait' : 'pointer',
               textTransform: 'uppercase',
               letterSpacing: '1px',
+              opacity: loading ? 0.7 : 1,
             }}
           >
-            Access Dashboard
+            {loading ? 'Verifying...' : 'Access Dashboard'}
           </button>
         </form>
       </div>
